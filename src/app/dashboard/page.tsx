@@ -75,7 +75,7 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="flex items-start justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Beranda</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
 
         <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.title} className="rounded-2xl bg-jax-lime px-5 py-4 text-black">
+          <div key={s.title} className="rounded-2xl bg-jax-lime px-5 py-4 text-white">
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-xs opacity-90">{s.title}</div>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Pendapatan per Minggu */}
-        <div className="rounded-2xl bg-jax-lime p-5 text-black">
+        <div className="rounded-2xl bg-jax-lime p-5 text-white">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-sm font-semibold">Pendapatan per Minggu</div>

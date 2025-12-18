@@ -1,23 +1,9 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
-import { useEffect, useMemo, useRef, useState } from 'react';
-
-type Role = 'admin' | 'cashier' | 'warehouse';
-
-type UserRow = {
-  id: string;
-  name: string;
-  email: string;
-  branch: string;
-  role: Role;
-};
-
-const ROLE_LABEL: Record<Role, string> = {
-  admin: 'Admin',
-  cashier: 'Kasir',
-  warehouse: 'Gudang',
-};
+import { DEFAULT_USERS, ROLE_LABEL, type Role, type UserRow, loadUsers, saveUsers } from '@/app/pengguna/userStore';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ');
@@ -34,57 +20,23 @@ function rolePillClass(role: Role) {
 }
 
 export default function PenggunaPage() {
-  const branches = useMemo(() => ['Pusat', 'Cabang Jakarta', 'Cabang Surabaya', 'Cabang Bogor'], []);
+  const router = useRouter();
 
-  const [rows, setRows] = useState<UserRow[]>([
-    {
-      id: '1',
-      name: 'Ahmad Ashidiq',
-      email: 'ahmadasshidiq08@gmail.com',
-      branch: 'Pusat',
-      role: 'admin',
-    },
-    {
-      id: '2',
-      name: 'Rudi Malik',
-      email: 'rudimalik@gmail.com',
-      branch: 'Cabang Jakarta',
-      role: 'cashier',
-    },
-    {
-      id: '3',
-      name: 'Suparman',
-      email: 'suparman38@gmail.com',
-      branch: 'Cabang Jakarta',
-      role: 'warehouse',
-    },
-    {
-      id: '4',
-      name: 'Ayu Fadilah',
-      email: 'ayu7788@gmail.com',
-      branch: 'Cabang Surabaya',
-      role: 'warehouse',
-    },
-    {
-      id: '5',
-      name: 'Marwah',
-      email: 'marwan56@gmail.com',
-      branch: 'Cabang Bogor',
-      role: 'warehouse',
-    },
-  ]);
+  const [rows, setRows] = useState<UserRow[]>(DEFAULT_USERS);
+  const [hydrated, setHydrated] = useState(false);
 
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [openMenuForId, setOpenMenuForId] = useState<string | null>(null);
-
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const [draft, setDraft] = useState<{ name: string; email: string; branch: string; role: Role }>({
-    name: '',
-    email: '',
-    branch: branches[0] ?? 'Pusat',
-    role: 'cashier',
-  });
+  useEffect(() => {
+    setRows(loadUsers());
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveUsers(rows);
+  }, [rows, hydrated]);
 
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
@@ -108,34 +60,17 @@ export default function PenggunaPage() {
     setOpenMenuForId(null);
   };
 
-  const handleSetRole = (id: string, role: Role) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, role } : r)));
+  const handleEdit = (id: string) => {
     setOpenMenuForId(null);
-  };
-
-  const handleAdd = () => {
-    const name = draft.name.trim();
-    const email = draft.email.trim();
-    const branch = draft.branch.trim();
-
-    if (!name || !email || !branch) {
-      alert('Mohon lengkapi Nama, Email, Cabang, dan Role.');
-      return;
-    }
-
-    const id = String(Date.now());
-    setRows((prev) => [{ id, name, email, branch, role: draft.role }, ...prev]);
-
-    setIsAddOpen(false);
-    setDraft({ name: '', email: '', branch: branches[0] ?? 'Pusat', role: 'cashier' });
+    router.push(`/pengguna/${id}/edit`);
   };
 
   return (
     <AppShell>
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-gray-400">Pengguna</div>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">Pengguna/Karyawan</h1>
+          <div className="text-xs text-gray-400">user</div>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">users/employees</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -156,7 +91,7 @@ export default function PenggunaPage() {
 
       <div className="mt-4 flex items-center gap-2">
         <button
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => router.push('/pengguna/tambah')}
           className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
         >
           <span className="text-base leading-none">+</span> Tambah
@@ -212,20 +147,13 @@ export default function PenggunaPage() {
                           ref={menuRef}
                           className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
                         >
-                          <div className="px-3 py-2 text-[11px] font-medium text-gray-500">Ubah role</div>
-                          {(['admin', 'cashier', 'warehouse'] as Role[]).map((role) => (
-                            <button
-                              key={role}
-                              type="button"
-                              onClick={() => handleSetRole(r.id, role)}
-                              className={cn(
-                                'w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50',
-                                r.role === role && 'bg-gray-50'
-                              )}
-                            >
-                              {ROLE_LABEL[role]}
-                            </button>
-                          ))}
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(r.id)}
+                            className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
+                          >
+                            Edit
+                          </button>
 
                           <div className="my-1 h-px bg-gray-100" />
 
@@ -254,105 +182,6 @@ export default function PenggunaPage() {
           </div>
         </div>
       </div>
-
-      {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Close modal"
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setIsAddOpen(false)}
-          />
-
-          <div className="relative w-full max-w-lg rounded-2xl bg-white border border-gray-200 p-5 shadow-xl">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm font-semibold text-gray-900">Tambah Pengguna</div>
-                <div className="mt-1 text-xs text-gray-500">Input manual: nama, email, cabang, role.</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddOpen(false)}
-                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-                aria-label="Close"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-3">
-              <label className="grid gap-1">
-                <span className="text-xs text-gray-600">Nama</span>
-                <input
-                  value={draft.name}
-                  onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
-                  placeholder="Nama pengguna"
-                />
-              </label>
-
-              <label className="grid gap-1">
-                <span className="text-xs text-gray-600">Email</span>
-                <input
-                  value={draft.email}
-                  onChange={(e) => setDraft((p) => ({ ...p, email: e.target.value }))}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
-                  placeholder="email@contoh.com"
-                />
-              </label>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="grid gap-1">
-                  <span className="text-xs text-gray-600">Cabang</span>
-                  <select
-                    value={draft.branch}
-                    onChange={(e) => setDraft((p) => ({ ...p, branch: e.target.value }))}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
-                  >
-                    {branches.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-xs text-gray-600">Role</span>
-                  <select
-                    value={draft.role}
-                    onChange={(e) => setDraft((p) => ({ ...p, role: e.target.value as Role }))}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="cashier">Kasir</option>
-                    <option value="warehouse">Gudang</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsAddOpen(false)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleAdd}
-                className="rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark"
-              >
-                Simpan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AppShell>
   );
 }

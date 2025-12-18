@@ -5,8 +5,8 @@ export default function LaporanPage() {
     <AppShell>
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-gray-400">Laporan</div>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">Laporan</h1>
+          <div className="text-xs text-gray-400">report</div>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">report</h1>
         </div>
 
         <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">

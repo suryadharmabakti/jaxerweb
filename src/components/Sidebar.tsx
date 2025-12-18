@@ -34,7 +34,12 @@ function DotIcon({ active }: { active: boolean }) {
   );
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  toggle: () => void;
+}
+
+export default function Sidebar({ open, toggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -132,11 +137,24 @@ export default function Sidebar() {
   const isActive = (href: string) => pathname === href;
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-72 bg-white border-r border-jax-line flex flex-col">
-      <div className="px-6 py-6">
+    <aside
+      className={cn(
+        'fixed left-0 top-0 z-40 flex h-screen w-72 flex-col border-r border-jax-line bg-white transition-transform duration-300',
+        open ? 'translate-x-0' : '-translate-x-full'
+      )}
+    >
+      <div className="flex items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2">
           <img src="/jaxlab.png" alt="JaxLab" className="h-6 w-auto" />
         </div>
+        <button
+          onClick={toggle}
+          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
       </div>
 
       <div className="px-6 pb-2 text-xs text-gray-400">Highlight</div>
