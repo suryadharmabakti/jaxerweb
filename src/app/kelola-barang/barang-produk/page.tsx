@@ -1,7 +1,7 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
-import { DEFAULT_PRODUCTS, type ProductRow, loadProducts, saveProducts } from '@/app/kelola-barang/barang-produk/productStore';
+import { DEFAULT_PRODUCTS, loadProducts, saveProducts } from '@/app/kelola-barang/barang-produk/productStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -13,10 +13,29 @@ function includesText(value: string, q: string) {
   return value.toLowerCase().includes(q);
 }
 
+export type Product = {
+  _id: string;
+  name: string;
+  code: string;
+  file: string;
+  userId: string;
+}
+
+export type Stock = {
+  name: string;
+  code: string;
+  qty: number;
+  branch: string;
+  harga: number;
+  hargaModal: number;
+  satuan: string;
+  produk: Product;
+};
+
 export default function BarangProdukPage() {
   const router = useRouter();
 
-  const [rows, setRows] = useState<ProductRow[]>(DEFAULT_PRODUCTS);
+  const [rows, setRows] = useState<Stock[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   const [showFilter, setShowFilter] = useState(false);
@@ -25,9 +44,34 @@ export default function BarangProdukPage() {
   const [openMenuForCode, setOpenMenuForCode] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  const fetchData = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const token = localStorage.getItem('token');
+
+      const result = await fetch(
+        `/api/stock?id=${user._id}&token=${token}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const res = await result.json();
+      if (!result.ok) throw new Error(res.error || 'Login gagal');
+
+      setRows(res.data);
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
+  console.log("cek ini data", rows);
+
   useEffect(() => {
-    setRows(loadProducts());
-    setHydrated(true);
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -54,15 +98,12 @@ export default function BarangProdukPage() {
 
     return rows.filter((r) => {
       const qtyText = Number.isFinite(r.qty) ? String(r.qty) : '';
-      const sellText = Number.isFinite(r.sellPrice) ? String(r.sellPrice) : '';
-      const buyText = Number.isFinite(r.buyPrice) ? String(r.buyPrice) : '';
+      const sellText = Number.isFinite(r.harga) ? String(r.harga) : '';
+      const buyText = Number.isFinite(r.hargaModal) ? String(r.hargaModal) : '';
 
       return (
         includesText(r.name, q) ||
         includesText(r.code, q) ||
-        includesText(r.category, q) ||
-        includesText(r.brand, q) ||
-        includesText(r.branch, q) ||
         includesText(qtyText, q) ||
         includesText(sellText, q) ||
         includesText(buyText, q)
@@ -70,7 +111,7 @@ export default function BarangProdukPage() {
     });
   }, [rows, filterText]);
 
-  const totalQty = useMemo(() => filteredRows.reduce((sum, r) => sum + (Number.isFinite(r.qty) ? r.qty : 0), 0), [filteredRows]);
+  // const totalQty = useMemo(() => filteredRows.reduce((sum, r) => sum + (Number.isFinite(r.qty) ? r.qty : 0), 0), [filteredRows]);
 
   const handleDelete = (code: string) => {
     const p = rows.find((r) => r.code === code);
@@ -160,9 +201,9 @@ export default function BarangProdukPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs opacity-90">Total Stok Tersedia</div>
-            <div className="mt-1 text-lg font-semibold">{totalQty.toLocaleString('id-ID')}</div>
+            {/* <div className="mt-1 text-lg font-semibold">{totalQty.toLocaleString('id-ID')}</div> */}
             <div className="mt-1 text-[11px] opacity-90">
-              Menampilkan {filteredRows.length} dari {rows.length} produk
+              Menampilkan {filteredRows?.length} dari {rows?.length} produk
             </div>
           </div>
           <div className="rounded-xl bg-white/20 p-2">
@@ -191,27 +232,29 @@ export default function BarangProdukPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((r) => (
+              {filteredRows?.map((r) => (
                 <tr key={r.code} className="border-b border-gray-100">
                   <td className="px-5 py-3">
-                    {r.imageDataUrl ? (
-                      <img
-                        src={r.imageDataUrl}
-                        alt={r.name}
-                        className="h-8 w-8 rounded-full object-cover border border-gray-200"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-gray-200" />
-                    )}
+                    <div className="h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                      {r.produk?.file ? (
+                        <img
+                          src={r.produk.file}
+                          alt={r.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-gray-200" />
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
                   <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.category}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.brand}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.qty.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.qty}</td>
                   <td className="px-5 py-3 text-sm text-gray-700">{r.branch}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.sellPrice.toLocaleString('id-ID')}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.buyPrice.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.harga.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.hargaModal.toLocaleString('id-ID')}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button
@@ -256,7 +299,7 @@ export default function BarangProdukPage() {
         </div>
 
         <div className="flex items-center justify-between px-5 py-3 text-xs text-gray-500">
-          <div>Menampilkan {filteredRows.length} dari {rows.length}</div>
+          <div>Menampilkan {filteredRows?.length} dari {rows?.length}</div>
           <div className="flex items-center gap-2">
             <span>Rows per page</span>
             <span className="rounded border border-gray-200 bg-white px-2 py-1">20</span>

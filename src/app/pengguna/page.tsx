@@ -1,41 +1,72 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
-import { DEFAULT_USERS, ROLE_LABEL, type Role, type UserRow, loadUsers, saveUsers } from '@/app/pengguna/userStore';
+import { DEFAULT_USERS, type Role, type UserRow, saveUsers } from '@/app/pengguna/userStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { Branch } from '../kelola-barang/cabang/page';
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ');
 }
 
-function rolePillClass(role: Role) {
-  // Keep it simple + close to your current design language (lime pill)
+function rolePillClass(role: String) {
   return cn(
     'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium',
     role === 'admin' && 'bg-jax-lime text-white',
-    role === 'cashier' && 'bg-jax-lime text-white',
-    role === 'warehouse' && 'bg-jax-lime text-white'
+    role === 'kasir' && 'bg-jax-lime text-white',
+    role === 'gudang' && 'bg-jax-lime text-white'
   );
 }
+
+  export type User = {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    branch: Branch;
+  };
 
 export default function PenggunaPage() {
   const router = useRouter();
 
-  const [rows, setRows] = useState<UserRow[]>(DEFAULT_USERS);
+  const [rows, setRows] = useState<User[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   const [openMenuForId, setOpenMenuForId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  const fetchData = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const token = localStorage.getItem('token');
+
+      const result = await fetch(
+        `/api/user?id=${user._id}&email=${user.email}&token=${token}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const res = await result.json();
+      if (!result.ok) throw new Error(res.error || 'Login gagal');
+
+      setRows(res.data);
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
   useEffect(() => {
-    setRows(loadUsers());
-    setHydrated(true);
+    fetchData();
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    saveUsers(rows);
+    // saveUsers(rows);
   }, [rows, hydrated]);
 
   useEffect(() => {
@@ -52,11 +83,11 @@ export default function PenggunaPage() {
   }, [openMenuForId]);
 
   const handleDelete = (id: string) => {
-    const u = rows.find((r) => r.id === id);
+    const u = rows.find((r) => r._id === id);
     if (!u) return;
     if (!confirm(`Hapus pengguna: ${u.name}?`)) return;
 
-    setRows((prev) => prev.filter((r) => r.id !== id));
+    setRows((prev) => prev.filter((r) => r._id !== id));
     setOpenMenuForId(null);
   };
 
@@ -69,8 +100,8 @@ export default function PenggunaPage() {
     <AppShell>
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-gray-400">user</div>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">users/employees</h1>
+          <div className="text-xs text-gray-400">Pengguna/Karyawan</div>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">Pengguna/Karyawan</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -124,32 +155,32 @@ export default function PenggunaPage() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-gray-100">
+                <tr key={r._id} className="border-b border-gray-100">
                   <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
                   <td className="px-5 py-3 text-sm text-gray-700">{r.email}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.branch}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.branch?.name}</td>
                   <td className="px-5 py-3 text-sm">
-                    <span className={rolePillClass(r.role)}>{ROLE_LABEL[r.role]}</span>
+                    <span className={rolePillClass(r.role.toLowerCase())}>{r.role.charAt(0).toUpperCase() + r.role.slice(1)}</span>
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button
                         type="button"
-                        onClick={() => setOpenMenuForId((v) => (v === r.id ? null : r.id))}
+                        onClick={() => setOpenMenuForId((v) => (v === r._id ? null : r._id))}
                         className="rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-100"
                         aria-label="Row actions"
                       >
                         <span className="text-lg leading-none">…</span>
                       </button>
 
-                      {openMenuForId === r.id && (
+                      {openMenuForId === r._id && (
                         <div
                           ref={menuRef}
                           className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
                         >
                           <button
                             type="button"
-                            onClick={() => handleEdit(r.id)}
+                            onClick={() => handleEdit(r._id)}
                             className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
                           >
                             Edit
@@ -159,7 +190,7 @@ export default function PenggunaPage() {
 
                           <button
                             type="button"
-                            onClick={() => handleDelete(r.id)}
+                            onClick={() => handleDelete(r._id)}
                             className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                           >
                             Hapus

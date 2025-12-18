@@ -13,9 +13,14 @@ function includesText(value: string, q: string) {
   return value.toLowerCase().includes(q);
 }
 
+export type Brand = {
+  name: string;
+  code: string;
+};
+
 export default function MerkProdukPage() {
   const router = useRouter();
-  const [rows, setRows] = useState<BrandRow[]>([]);
+  const [rows, setRows] = useState<Brand[]>([]);
 
   const [showFilter, setShowFilter] = useState(false);
   const [filterText, setFilterText] = useState('');
@@ -23,8 +28,33 @@ export default function MerkProdukPage() {
   const [openMenuForCode, setOpenMenuForCode] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  const fetchData = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const token = localStorage.getItem('token');
+
+      const result = await fetch(
+        `/api/merk-product?id=${user._id}&token=${token}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const res = await result.json();
+      console.log("cek data", res);
+      if (!result.ok) throw new Error(res.error || 'Login gagal');
+
+      setRows(res.data);
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
   useEffect(() => {
-    setRows(loadBrands());
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -68,7 +98,7 @@ export default function MerkProdukPage() {
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-gray-400">Manage Item &nbsp;›&nbsp; product brand</div>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">product brand</h1>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">Merk Produk</h1>
         </div>
 
         <div className="flex items-center gap-2">
