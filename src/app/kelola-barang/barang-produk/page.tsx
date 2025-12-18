@@ -1,7 +1,7 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
-import { DEFAULT_PRODUCTS, type ProductRow, loadProducts, saveProducts } from '@/app/kelola-barang/barang-produk/productStore';
+import { DEFAULT_PRODUCTS, loadProducts, saveProducts } from '@/app/kelola-barang/barang-produk/productStore';
 import { exportToExcel, importFromExcel } from '@/utils/excel';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,10 +14,29 @@ function includesText(value: string, q: string) {
   return value.toLowerCase().includes(q);
 }
 
+export type Product = {
+  _id: string;
+  name: string;
+  code: string;
+  file: string;
+  userId: string;
+}
+
+export type Stock = {
+  name: string;
+  code: string;
+  qty: number;
+  branch: string;
+  harga: number;
+  hargaModal: number;
+  satuan: string;
+  produk: Product;
+};
+
 export default function BarangProdukPage() {
   const router = useRouter();
 
-  const [rows, setRows] = useState<ProductRow[]>(DEFAULT_PRODUCTS);
+  const [rows, setRows] = useState<Stock[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   const [showFilter, setShowFilter] = useState(false);
@@ -41,6 +60,32 @@ export default function BarangProdukPage() {
     actions: true,
   });
 
+  const fetchData = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const token = localStorage.getItem('token');
+
+      const result = await fetch(
+        `/api/stock?id=${user._id}&token=${token}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const res = await result.json();
+      if (!result.ok) throw new Error(res.error || 'Login gagal');
+
+      setRows(res.data);
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
+  console.log("cek ini data", rows);
+
   useEffect(() => {
     setRows(loadProducts());
     setHydrated(true);
@@ -62,6 +107,7 @@ export default function BarangProdukPage() {
         });
       }
     } catch {}
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -117,15 +163,12 @@ export default function BarangProdukPage() {
 
     return rows.filter((r) => {
       const qtyText = Number.isFinite(r.qty) ? String(r.qty) : '';
-      const sellText = Number.isFinite(r.sellPrice) ? String(r.sellPrice) : '';
-      const buyText = Number.isFinite(r.buyPrice) ? String(r.buyPrice) : '';
+      const sellText = Number.isFinite(r.harga) ? String(r.harga) : '';
+      const buyText = Number.isFinite(r.hargaModal) ? String(r.hargaModal) : '';
 
       return (
         includesText(r.name, q) ||
         includesText(r.code, q) ||
-        includesText(r.category, q) ||
-        includesText(r.brand, q) ||
-        includesText(r.branch, q) ||
         includesText(qtyText, q) ||
         includesText(sellText, q) ||
         includesText(buyText, q)
@@ -133,7 +176,7 @@ export default function BarangProdukPage() {
     });
   }, [rows, filterText]);
 
-  const totalQty = useMemo(() => filteredRows.reduce((sum, r) => sum + (Number.isFinite(r.qty) ? r.qty : 0), 0), [filteredRows]);
+  // const totalQty = useMemo(() => filteredRows.reduce((sum, r) => sum + (Number.isFinite(r.qty) ? r.qty : 0), 0), [filteredRows]);
 
   const handleDelete = (code: string) => {
     const p = rows.find((r) => r.code === code);
@@ -157,46 +200,46 @@ export default function BarangProdukPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
 
-    try {
-      const data = await importFromExcel(file);
-      // Validate or map data
-      const newRows: ProductRow[] = data.map((item: any) => ({
-        name: item.name || item['Nama'] || '',
-        code: item.code || item['Kode Produk'] || '',
-        category: item.category || item['Kategori Produk'] || '',
-        brand: item.brand || item['Merk Produk'] || '',
-        qty: Number(item.qty || item['Qty'] || 0),
-        branch: item.branch || item['Cabang'] || '',
-        sellPrice: Number(item.sellPrice || item['Harga Jual'] || 0),
-        buyPrice: Number(item.buyPrice || item['Harga Beli'] || 0),
-        imageDataUrl: item.imageDataUrl || item['Gambar'] || undefined,
-      })).filter(r => r.name && r.code);
+  //   try {
+  //     const data = await importFromExcel(file);
+  //     // Validate or map data
+  //     const newRows: Product[] = data.map((item: any) => ({
+  //       name: item.name || item['Nama'] || '',
+  //       code: item.code || item['Kode Produk'] || '',
+  //       category: item.category || item['Kategori Produk'] || '',
+  //       brand: item.brand || item['Merk Produk'] || '',
+  //       qty: Number(item.qty || item['Qty'] || 0),
+  //       branch: item.branch || item['Cabang'] || '',
+  //       sellPrice: Number(item.sellPrice || item['Harga Jual'] || 0),
+  //       buyPrice: Number(item.buyPrice || item['Harga Beli'] || 0),
+  //       imageDataUrl: item.imageDataUrl || item['Gambar'] || undefined,
+  //     })).filter(r => r.name && r.code);
 
-      if (confirm(`Akan mengimpor ${newRows.length} data? Data lama akan digabungkan.`)) {
-         const combined = [...rows];
-         for (const newRow of newRows) {
-            const index = combined.findIndex(r => r.code === newRow.code);
-            if (index >= 0) {
-               combined[index] = newRow; 
-            } else {
-               combined.push(newRow);
-            }
-         }
-         saveProducts(combined);
-         setRows(combined);
-         alert('Import berhasil!');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Gagal mengimpor file excel.');
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
+  //     if (confirm(`Akan mengimpor ${newRows.length} data? Data lama akan digabungkan.`)) {
+  //        const combined = [...rows];
+  //        for (const newRow of newRows) {
+  //           const index = combined.findIndex(r => r.code === newRow.code);
+  //           if (index >= 0) {
+  //              combined[index] = newRow; 
+  //           } else {
+  //              combined.push(newRow);
+  //           }
+  //        }
+  //        saveProducts(combined);
+  //        setRows(combined);
+  //        alert('Import berhasil!');
+  //     }
+  //   } catch (error) {
+  //     console.error(error);
+  //     alert('Gagal mengimpor file excel.');
+  //   } finally {
+  //     if (fileInputRef.current) fileInputRef.current.value = '';
+  //   }
+  // };
 
   return (
     <AppShell>
@@ -306,13 +349,13 @@ export default function BarangProdukPage() {
         >
           <span className="text-base leading-none">+</span> Tambah
         </button>
-        <input
+        {/* <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
           accept=".xlsx, .xls"
-        />
+        /> */}
         <button 
           onClick={handleImportClick}
           className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
@@ -337,9 +380,9 @@ export default function BarangProdukPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs opacity-90">Total Stok Tersedia</div>
-            <div className="mt-1 text-lg font-semibold">{totalQty.toLocaleString('id-ID')}</div>
+            {/* <div className="mt-1 text-lg font-semibold">{totalQty.toLocaleString('id-ID')}</div> */}
             <div className="mt-1 text-[11px] opacity-90">
-              Menampilkan {filteredRows.length} dari {rows.length} produk
+              Menampilkan {filteredRows?.length} dari {rows?.length} produk
             </div>
           </div>
           <div className="rounded-xl bg-white/20 p-2">
@@ -368,29 +411,29 @@ export default function BarangProdukPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((r) => (
+              {filteredRows?.map((r) => (
                 <tr key={r.code} className="border-b border-gray-100">
-                  {columns.image && (
-                    <td className="px-5 py-3">
-                      {r.imageDataUrl ? (
+                  <td className="px-5 py-3">
+                    <div className="h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                      {r.produk?.file ? (
                         <img
-                          src={r.imageDataUrl}
+                          src={r.produk.file}
                           alt={r.name}
-                          className="h-8 w-8 rounded-full object-cover border border-gray-200"
+                          className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="h-8 w-8 rounded-full bg-gray-200" />
+                        <div className="h-full w-full bg-gray-200" />
                       )}
-                    </td>
-                  )}
-                  {columns.name && <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>}
-                  {columns.code && <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>}
-                  {columns.category && <td className="px-5 py-3 text-sm text-gray-700">{r.category}</td>}
-                  {columns.brand && <td className="px-5 py-3 text-sm text-gray-700">{r.brand}</td>}
-                  {columns.qty && <td className="px-5 py-3 text-sm text-gray-700">{r.qty.toLocaleString('id-ID')}</td>}
-                  {columns.branch && <td className="px-5 py-3 text-sm text-gray-700">{r.branch}</td>}
-                  {columns.sellPrice && <td className="px-5 py-3 text-sm text-gray-700">{r.sellPrice.toLocaleString('id-ID')}</td>}
-                  {columns.buyPrice && <td className="px-5 py-3 text-sm text-gray-700">{r.buyPrice.toLocaleString('id-ID')}</td>}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.qty}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.branch}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.harga?.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.hargaModal?.toLocaleString('id-ID')}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button
@@ -435,7 +478,7 @@ export default function BarangProdukPage() {
         </div>
 
         <div className="flex items-center justify-between px-5 py-3 text-xs text-gray-500">
-          <div>Menampilkan {filteredRows.length} dari {rows.length}</div>
+          <div>Menampilkan {filteredRows?.length} dari {rows?.length}</div>
           <div className="flex items-center gap-2">
             <span>Rows per page</span>
             <span className="rounded border border-gray-200 bg-white px-2 py-1">20</span>

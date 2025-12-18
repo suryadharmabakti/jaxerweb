@@ -1,12 +1,15 @@
 // src/services/api.ts
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://toko.tetrabit.my.id/api';
 
 const api = {
   // Login
   login: async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const credentials = btoa(`${email}:${password}`);
+
+    const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: {
+        'Authorization': `Basic ${credentials}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ email, password })
@@ -15,11 +18,12 @@ const api = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Login failed');
+      throw new Error(data.message || 'Login failed');
     }
 
-    return data; // { token, user }
-  },
+    return data;
+  }
+
 
   // Register
   register: async (username: string, email: string, password: string) => {

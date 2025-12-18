@@ -1,7 +1,6 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
-import { loadBranches, saveBranches, type BranchRow } from '@/app/kelola-barang/cabang/branchStore';
 import { exportToExcel, importFromExcel } from '@/utils/excel';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,15 +13,46 @@ function includesText(value: string, q: string) {
   return value.toLowerCase().includes(q);
 }
 
+export type Branch = {
+  name: string;
+  noTeleponAdmin: string;
+  alamat: string;
+};
+
 export default function CabangPage() {
   const router = useRouter();
-  const [rows, setRows] = useState<BranchRow[]>([]);
+  const [rows, setRows] = useState<Branch[]>([]);
 
   const [showFilter, setShowFilter] = useState(false);
   const [filterText, setFilterText] = useState('');
 
   const [openMenuForName, setOpenMenuForName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const fetchData = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const token = localStorage.getItem('token');
+
+      const result = await fetch(
+        `/api/branch?id=${user._id}&token=${token}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const res = await result.json();
+      if (!result.ok) throw new Error(res.error || 'Login gagal');
+
+      console.log("cek data", res);
+      setRows(res.data);
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const columnsRef = useRef<HTMLDivElement | null>(null);
@@ -34,7 +64,7 @@ export default function CabangPage() {
   });
 
   useEffect(() => {
-    setRows(loadBranches());
+    fetchData();
     try {
       const saved = localStorage.getItem('columns_cabang');
       if (saved) {
@@ -85,7 +115,7 @@ export default function CabangPage() {
     const q = filterText.trim().toLowerCase();
     if (!q) return rows;
 
-    return rows.filter((r) => includesText(r.name, q) || includesText(r.phone, q) || includesText(r.location, q));
+    return rows.filter((r) => includesText(r.name, q) || includesText(r.noTeleponAdmin, q) || includesText(r.alamat, q));
   }, [rows, filterText]);
 
   const handleDelete = (name: string) => {
@@ -94,7 +124,6 @@ export default function CabangPage() {
     if (!confirm(`Hapus cabang: ${b.name}?`)) return;
 
     const next = rows.filter((r) => r.name !== name);
-    saveBranches(next);
     setRows(next);
     setOpenMenuForName(null);
   };
@@ -112,47 +141,47 @@ export default function CabangPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
 
-    try {
-      const data = await importFromExcel(file);
-      // Validate or map data
-      const newRows: BranchRow[] = data.map((item: any) => ({
-        name: item.name || item['Nama Cabang'] || '',
-        phone: item.phone || item['No Telpon Admin'] || '',
-        location: item.location || item['Lokasi Cabang'] || '',
-      })).filter(r => r.name);
+  //   try {
+  //     const data = await importFromExcel(file);
+  //     // Validate or map data
+  //     const newRows: Branch[] = data.map((item: any) => ({
+  //       name: item.name || item['Nama Cabang'] || '',
+  //       phone: item.phone || item['No Telpon Admin'] || '',
+  //       location: item.location || item['Lokasi Cabang'] || '',
+  //     })).filter(r => r.name);
 
-      if (confirm(`Akan mengimpor ${newRows.length} data? Data lama akan digabungkan.`)) {
-         const combined = [...rows];
-         for (const newRow of newRows) {
-            const index = combined.findIndex(r => r.name === newRow.name);
-            if (index >= 0) {
-               combined[index] = newRow; 
-            } else {
-               combined.push(newRow);
-            }
-         }
-         saveBranches(combined);
-         setRows(combined);
-         alert('Import berhasil!');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Gagal mengimpor file excel.');
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
+  //     if (confirm(`Akan mengimpor ${newRows.length} data? Data lama akan digabungkan.`)) {
+  //        const combined = [...rows];
+  //        for (const newRow of newRows) {
+  //           const index = combined.findIndex(r => r.name === newRow.name);
+  //           if (index >= 0) {
+  //              combined[index] = newRow; 
+  //           } else {
+  //              combined.push(newRow);
+  //           }
+  //        }
+  //        saveBranches(combined);
+  //        setRows(combined);
+  //        alert('Import berhasil!');
+  //     }
+  //   } catch (error) {
+  //     console.error(error);
+  //     alert('Gagal mengimpor file excel.');
+  //   } finally {
+  //     if (fileInputRef.current) fileInputRef.current.value = '';
+  //   }
+  // };
 
   return (
     <AppShell>
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-gray-400">Manage Item &nbsp;›&nbsp; branch</div>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">branch</h1>
+          <div className="text-xs text-gray-400">Manage Item &nbsp;›&nbsp; Cabang</div>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">Cabang</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -277,13 +306,13 @@ export default function CabangPage() {
         >
           <span className="text-base leading-none">+</span> Tambah
         </button>
-        <input
+        {/* <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
           accept=".xlsx, .xls"
-        />
+        /> */}
         <button 
           onClick={handleImportClick}
           className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
@@ -318,9 +347,12 @@ export default function CabangPage() {
             <tbody>
               {filteredRows.map((r) => (
                 <tr key={r.name} className="border-b border-gray-100">
+                  <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.noTeleponAdmin || '-'}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.alamat || '-'}</td>
                   {columns.name && <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>}
-                  {columns.phone && <td className="px-5 py-3 text-sm text-gray-700">{r.phone}</td>}
-                  {columns.location && <td className="px-5 py-3 text-sm text-gray-700">{r.location}</td>}
+                  {columns.phone && <td className="px-5 py-3 text-sm text-gray-700">{r.noTeleponAdmin}</td>}
+                  {columns.location && <td className="px-5 py-3 text-sm text-gray-700">{r.alamat}</td>}
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button

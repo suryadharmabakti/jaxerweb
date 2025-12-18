@@ -1,15 +1,22 @@
 import { readJson, writeJson } from '@/services/localStore';
 
-export type ProductRow = {
-  imageDataUrl?: string;
+export type Product = {
+  _id: string,
+  name: string,
+  code: string,
+  file: string,
+  userId: string,
+}
+
+export type Stock = {
   name: string;
   code: string;
-  category: string;
-  brand: string;
   qty: number;
   branch: string;
-  sellPrice: number;
-  buyPrice: number;
+  harga: number;
+  hargaModal: number;
+  satuan: string;
+  produk: Product;
 };
 
 export const PRODUCT_STORAGE_KEY = 'jaxerweb_products';
