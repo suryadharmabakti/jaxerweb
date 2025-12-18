@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'JaxerWeb - Chat Bot Assistant',
-  description: 'AI-powered chat bot with document management',
+  title: 'Jaxlab - Point of Sales',
+  description: '',
 }
 
 export default function RootLayout({

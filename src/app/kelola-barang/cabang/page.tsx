@@ -1,7 +1,6 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
-import { loadBranches, saveBranches, type BranchRow } from '@/app/kelola-barang/cabang/branchStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -13,9 +12,15 @@ function includesText(value: string, q: string) {
   return value.toLowerCase().includes(q);
 }
 
+export type Branch = {
+  name: string;
+  noTeleponAdmin: string;
+  alamat: string;
+};
+
 export default function CabangPage() {
   const router = useRouter();
-  const [rows, setRows] = useState<BranchRow[]>([]);
+  const [rows, setRows] = useState<Branch[]>([]);
 
   const [showFilter, setShowFilter] = useState(false);
   const [filterText, setFilterText] = useState('');
@@ -23,8 +28,33 @@ export default function CabangPage() {
   const [openMenuForName, setOpenMenuForName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  const fetchData = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const token = localStorage.getItem('token');
+
+      const result = await fetch(
+        `/api/branch?id=${user._id}&token=${token}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const res = await result.json();
+      if (!result.ok) throw new Error(res.error || 'Login gagal');
+
+      console.log("cek data", res);
+      setRows(res.data);
+    } catch (error) {
+      console.log("error", error)
+    }
+  }
+
   useEffect(() => {
-    setRows(loadBranches());
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -44,7 +74,7 @@ export default function CabangPage() {
     const q = filterText.trim().toLowerCase();
     if (!q) return rows;
 
-    return rows.filter((r) => includesText(r.name, q) || includesText(r.phone, q) || includesText(r.location, q));
+    return rows.filter((r) => includesText(r.name, q) || includesText(r.noTeleponAdmin, q) || includesText(r.alamat, q));
   }, [rows, filterText]);
 
   const handleDelete = (name: string) => {
@@ -53,7 +83,6 @@ export default function CabangPage() {
     if (!confirm(`Hapus cabang: ${b.name}?`)) return;
 
     const next = rows.filter((r) => r.name !== name);
-    saveBranches(next);
     setRows(next);
     setOpenMenuForName(null);
   };
@@ -67,8 +96,8 @@ export default function CabangPage() {
     <AppShell>
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-gray-400">Manage Item &nbsp;›&nbsp; branch</div>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900">branch</h1>
+          <div className="text-xs text-gray-400">Manage Item &nbsp;›&nbsp; Cabang</div>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">Cabang</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -148,8 +177,8 @@ export default function CabangPage() {
               {filteredRows.map((r) => (
                 <tr key={r.name} className="border-b border-gray-100">
                   <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.phone}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.location}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.noTeleponAdmin || '-'}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{r.alamat || '-'}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button

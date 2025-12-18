@@ -30,12 +30,28 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await api.login(formData.email, formData.password);
+      const result = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
+      });
 
-      // NOTE: this stores the auth token client-side; if you prefer httpOnly cookies,
-      // we can switch to a Next.js Route Handler that sets a cookie instead.
-      localStorage.setItem('token', result.token);
-      localStorage.setItem('user', JSON.stringify(result.user));
+      const res = await result.json();
+      if (!result.ok) throw new Error(res.error || 'Login gagal');
+      
+      const data = res.data;
+
+      const user = {
+        _id: data._id,
+        name: data.name,
+        email: data.email,
+        store: data.store,
+      };
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(user));
 
       router.push('/dashboard');
     } catch (error: any) {
