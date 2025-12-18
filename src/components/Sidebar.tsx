@@ -126,7 +126,7 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
 
     try {
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem('user'); 
     } catch {
       // ignore
     }
@@ -139,13 +139,19 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen w-72 flex-col border-r border-jax-line bg-white transition-transform duration-300',
-        open ? 'translate-x-0' : '-translate-x-full'
+        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-jax-line bg-white transition-all duration-300',
+        open ? 'w-72' : 'w-20'
       )}
     >
-      <div className="flex items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2">
-          <img src="/jaxlab.png" alt="JaxLab" className="h-6 w-auto" />
+      <div className={cn('flex items-center justify-between py-6', open ? 'px-6' : 'px-3')}>
+        <div className={cn('flex items-center', open ? 'gap-2' : 'justify-center w-full')}>
+          <img
+            src={open ? '/jaxlab.png' : '/jaxer.png'}
+            alt={open ? 'JaxLab' : 'Jaxer'}
+            className={cn(
+              open ? 'h-6 w-auto' : 'h-8 w-8 rounded-lg bg-white ring-1 ring-gray-200 shadow-sm p-1 object-contain'
+            )}
+          />
         </div>
         <button
           onClick={toggle}
@@ -157,9 +163,9 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
         </button>
       </div>
 
-      <div className="px-6 pb-2 text-xs text-gray-400">Highlight</div>
+      {open && <div className="px-6 pb-2 text-xs text-gray-400">Highlight</div>}
 
-      <nav className="flex-1 px-4">
+      <nav className={cn('flex-1', open ? 'px-4' : 'px-2')}>
         <div className="space-y-1">
           {navItems.map((item) => {
             if ('children' in item) {
@@ -171,34 +177,39 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
                     type="button"
                     onClick={() => setIsKelolaBarangOpen((v) => !v)}
                     className={cn(
-                      'w-full flex items-center justify-between rounded-xl px-3 py-3 text-sm transition',
+                      'w-full flex items-center rounded-xl py-3 text-sm transition',
+                      open ? 'justify-between px-3' : 'justify-center',
                       anyChildActive
                         ? 'bg-jax-lime text-white'
                         : 'text-gray-700 hover:bg-gray-50'
                     )}
                   >
-                    <span className="flex items-center gap-3">
+                    <span className={cn('flex items-center', open ? 'gap-3' : '')}>
                       <span className={cn(anyChildActive ? 'text-white' : 'text-gray-600')}>{item.icon}</span>
-                      <span className={cn('font-medium', anyChildActive ? 'text-white' : 'text-gray-800')}>
-                        {item.label}
-                      </span>
+                      {open && (
+                        <span className={cn('font-medium', anyChildActive ? 'text-white' : 'text-gray-800')}>
+                          {item.label}
+                        </span>
+                      )}
                     </span>
 
-                    <svg
-                      className={cn(
-                        'h-4 w-4 transition-transform',
-                        isKelolaBarangOpen ? 'rotate-180' : 'rotate-0',
-                        anyChildActive ? 'text-white' : 'text-gray-500'
-                      )}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
+                    {open && (
+                      <svg
+                        className={cn(
+                          'h-4 w-4 transition-transform',
+                          isKelolaBarangOpen ? 'rotate-180' : 'rotate-0',
+                          anyChildActive ? 'text-white' : 'text-gray-500'
+                        )}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    )}
                   </button>
 
-                  {isKelolaBarangOpen && (
+                  {isKelolaBarangOpen && open && (
                     <div className="mt-2 ml-3 space-y-1">
                       {item.children.map((c) => {
                         const active = pathname === c.href;
@@ -229,12 +240,15 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
                 key={item.key}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition',
+                  'flex items-center rounded-xl py-3 text-sm transition',
+                  open ? 'gap-3 px-3' : 'justify-center',
                   active ? 'bg-jax-lime text-white' : 'text-gray-700 hover:bg-gray-50'
                 )}
               >
                 <span className={cn(active ? 'text-white' : 'text-gray-600')}>{item.icon}</span>
-                <span className={cn('font-medium', active ? 'text-white' : 'text-gray-800')}>{item.label}</span>
+                {open && (
+                  <span className={cn('font-medium', active ? 'text-white' : 'text-gray-800')}>{item.label}</span>
+                )}
               </Link>
             );
           })}
@@ -254,7 +268,7 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
             />
           </svg>
-          Keluar
+          {open && 'Keluar'}
         </button>
       </div>
     </aside>

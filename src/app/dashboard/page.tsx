@@ -145,7 +145,7 @@ export default function DashboardPage() {
             </div>
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 17l6-6 4 4 8-8" />
-            </svg>
+            </svg> 
           </div>
 
           <div className="mt-4 space-y-2 text-sm">

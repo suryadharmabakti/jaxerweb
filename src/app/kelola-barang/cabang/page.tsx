@@ -2,6 +2,7 @@
 
 import AppShell from '@/components/AppShell';
 import { loadBranches, saveBranches, type BranchRow } from '@/app/kelola-barang/cabang/branchStore';
+import { exportToExcel, importFromExcel } from '@/utils/excel';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -22,9 +23,30 @@ export default function CabangPage() {
 
   const [openMenuForName, setOpenMenuForName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const columnsRef = useRef<HTMLDivElement | null>(null);
+  const [columns, setColumns] = useState<Record<string, boolean>>({
+    name: true,
+    phone: true,
+    location: true,
+    actions: true,
+  });
 
   useEffect(() => {
     setRows(loadBranches());
+    try {
+      const saved = localStorage.getItem('columns_cabang');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setColumns({
+          name: Boolean(parsed.name),
+          phone: Boolean(parsed.phone),
+          location: Boolean(parsed.location),
+          actions: true,
+        });
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -39,6 +61,25 @@ export default function CabangPage() {
     window.addEventListener('mousedown', onMouseDown);
     return () => window.removeEventListener('mousedown', onMouseDown);
   }, [openMenuForName]);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!columnsOpen) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (columnsRef.current && columnsRef.current.contains(target)) return;
+      setColumnsOpen(false);
+    };
+    window.addEventListener('mousedown', onMouseDown);
+    return () => window.removeEventListener('mousedown', onMouseDown);
+  }, [columnsOpen]);
+
+  useEffect(() => {
+    try {
+      const toSave = { name: columns.name, phone: columns.phone, location: columns.location };
+      localStorage.setItem('columns_cabang', JSON.stringify(toSave));
+    } catch {}
+  }, [columns]);
 
   const filteredRows = useMemo(() => {
     const q = filterText.trim().toLowerCase();
@@ -63,6 +104,49 @@ export default function CabangPage() {
     router.push(`/kelola-barang/cabang/${encodeURIComponent(name)}/edit`);
   };
 
+  const handleExport = () => {
+    exportToExcel(rows, 'data-cabang');
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await importFromExcel(file);
+      // Validate or map data
+      const newRows: BranchRow[] = data.map((item: any) => ({
+        name: item.name || item['Nama Cabang'] || '',
+        phone: item.phone || item['No Telpon Admin'] || '',
+        location: item.location || item['Lokasi Cabang'] || '',
+      })).filter(r => r.name);
+
+      if (confirm(`Akan mengimpor ${newRows.length} data? Data lama akan digabungkan.`)) {
+         const combined = [...rows];
+         for (const newRow of newRows) {
+            const index = combined.findIndex(r => r.name === newRow.name);
+            if (index >= 0) {
+               combined[index] = newRow; 
+            } else {
+               combined.push(newRow);
+            }
+         }
+         saveBranches(combined);
+         setRows(combined);
+         alert('Import berhasil!');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Gagal mengimpor file excel.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <AppShell>
       <div className="flex items-start justify-between">
@@ -82,12 +166,86 @@ export default function CabangPage() {
             </svg>
             Filter
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h10" />
-            </svg>
-            Kolom
-          </button>
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onClick={() => setColumnsOpen((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h10" />
+              </svg>
+              Kolom
+            </button>
+            {columnsOpen && (
+              <div
+                ref={columnsRef}
+                className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-lg"
+              >
+                <div className="px-2 py-1 text-xs text-gray-500">Tampilkan Kolom</div>
+                <div className="flex items-center justify-between px-2 py-1">
+                  <span className="text-sm text-gray-700">Nama Cabang</span>
+                  <button
+                    onClick={() => setColumns((p) => ({ ...p, name: !p.name }))}
+                    className={cn(
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition',
+                      columns.name ? 'bg-jax-lime' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-4 w-4 transform rounded-full bg-white transition',
+                        columns.name ? 'translate-x-4' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1">
+                  <span className="text-sm text-gray-700">No Telpon Admin</span>
+                  <button
+                    onClick={() => setColumns((p) => ({ ...p, phone: !p.phone }))}
+                    className={cn(
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition',
+                      columns.phone ? 'bg-jax-lime' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-4 w-4 transform rounded-full bg-white transition',
+                        columns.phone ? 'translate-x-4' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1">
+                  <span className="text-sm text-gray-700">Lokasi Cabang</span>
+                  <button
+                    onClick={() => setColumns((p) => ({ ...p, location: !p.location }))}
+                    className={cn(
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition',
+                      columns.location ? 'bg-jax-lime' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-4 w-4 transform rounded-full bg-white transition',
+                        columns.location ? 'translate-x-4' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 opacity-60">
+                  <span className="text-sm text-gray-700">Aksi</span>
+                  <button
+                    className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition', 'bg-gray-300')}
+                    disabled
+                  >
+                    <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -119,13 +277,26 @@ export default function CabangPage() {
         >
           <span className="text-base leading-none">+</span> Tambah
         </button>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".xlsx, .xls"
+        />
+        <button 
+          onClick={handleImportClick}
+          className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
+        >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3" />
           </svg>
           Import
         </button>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition">
+        <button 
+          onClick={handleExport}
+          className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
+        >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21V9m0 0l4 4m-4-4l-4 4M4 7V4h16v3" />
           </svg>
@@ -138,18 +309,18 @@ export default function CabangPage() {
           <table className="min-w-full">
             <thead className="border-b border-gray-200">
               <tr className="text-left text-[11px] text-gray-500">
-                <th className="px-5 py-3 font-medium">Nama Cabang</th>
-                <th className="px-5 py-3 font-medium">No Telpon Admin</th>
-                <th className="px-5 py-3 font-medium">Lokasi Cabang</th>
+                {columns.name && <th className="px-5 py-3 font-medium">Nama Cabang</th>}
+                {columns.phone && <th className="px-5 py-3 font-medium">No Telpon Admin</th>}
+                {columns.location && <th className="px-5 py-3 font-medium">Lokasi Cabang</th>}
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((r) => (
                 <tr key={r.name} className="border-b border-gray-100">
-                  <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.phone}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.location}</td>
+                  {columns.name && <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>}
+                  {columns.phone && <td className="px-5 py-3 text-sm text-gray-700">{r.phone}</td>}
+                  {columns.location && <td className="px-5 py-3 text-sm text-gray-700">{r.location}</td>}
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button

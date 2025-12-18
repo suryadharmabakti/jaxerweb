@@ -2,6 +2,7 @@
 
 import AppShell from '@/components/AppShell';
 import { DEFAULT_PRODUCTS, type ProductRow, loadProducts, saveProducts } from '@/app/kelola-barang/barang-produk/productStore';
+import { exportToExcel, importFromExcel } from '@/utils/excel';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -24,10 +25,43 @@ export default function BarangProdukPage() {
 
   const [openMenuForCode, setOpenMenuForCode] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const columnsRef = useRef<HTMLDivElement | null>(null);
+  const [columns, setColumns] = useState<Record<string, boolean>>({
+    image: true,
+    name: true,
+    code: true,
+    category: true,
+    brand: true,
+    qty: true,
+    branch: true,
+    sellPrice: true,
+    buyPrice: true,
+    actions: true,
+  });
 
   useEffect(() => {
     setRows(loadProducts());
     setHydrated(true);
+    try {
+      const saved = localStorage.getItem('columns_barang');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setColumns({
+          image: Boolean(parsed.image),
+          name: Boolean(parsed.name),
+          code: Boolean(parsed.code),
+          category: Boolean(parsed.category),
+          brand: Boolean(parsed.brand),
+          qty: Boolean(parsed.qty),
+          branch: Boolean(parsed.branch),
+          sellPrice: Boolean(parsed.sellPrice),
+          buyPrice: Boolean(parsed.buyPrice),
+          actions: true,
+        });
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -47,6 +81,35 @@ export default function BarangProdukPage() {
     window.addEventListener('mousedown', onMouseDown);
     return () => window.removeEventListener('mousedown', onMouseDown);
   }, [openMenuForCode]);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!columnsOpen) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (columnsRef.current && columnsRef.current.contains(target)) return;
+      setColumnsOpen(false);
+    };
+    window.addEventListener('mousedown', onMouseDown);
+    return () => window.removeEventListener('mousedown', onMouseDown);
+  }, [columnsOpen]);
+
+  useEffect(() => {
+    try {
+      const toSave = {
+        image: columns.image,
+        name: columns.name,
+        code: columns.code,
+        category: columns.category,
+        brand: columns.brand,
+        qty: columns.qty,
+        branch: columns.branch,
+        sellPrice: columns.sellPrice,
+        buyPrice: columns.buyPrice,
+      };
+      localStorage.setItem('columns_barang', JSON.stringify(toSave));
+    } catch {}
+  }, [columns]);
 
   const filteredRows = useMemo(() => {
     const q = filterText.trim().toLowerCase();
@@ -86,6 +149,55 @@ export default function BarangProdukPage() {
     router.push(`/kelola-barang/barang-produk/${code}/edit`);
   };
 
+  const handleExport = () => {
+    exportToExcel(rows, 'data-barang');
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await importFromExcel(file);
+      // Validate or map data
+      const newRows: ProductRow[] = data.map((item: any) => ({
+        name: item.name || item['Nama'] || '',
+        code: item.code || item['Kode Produk'] || '',
+        category: item.category || item['Kategori Produk'] || '',
+        brand: item.brand || item['Merk Produk'] || '',
+        qty: Number(item.qty || item['Qty'] || 0),
+        branch: item.branch || item['Cabang'] || '',
+        sellPrice: Number(item.sellPrice || item['Harga Jual'] || 0),
+        buyPrice: Number(item.buyPrice || item['Harga Beli'] || 0),
+        imageDataUrl: item.imageDataUrl || item['Gambar'] || undefined,
+      })).filter(r => r.name && r.code);
+
+      if (confirm(`Akan mengimpor ${newRows.length} data? Data lama akan digabungkan.`)) {
+         const combined = [...rows];
+         for (const newRow of newRows) {
+            const index = combined.findIndex(r => r.code === newRow.code);
+            if (index >= 0) {
+               combined[index] = newRow; 
+            } else {
+               combined.push(newRow);
+            }
+         }
+         saveProducts(combined);
+         setRows(combined);
+         alert('Import berhasil!');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Gagal mengimpor file excel.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <AppShell>
       <div className="flex items-start justify-between">
@@ -105,12 +217,64 @@ export default function BarangProdukPage() {
             </svg>
             Filter
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h10" />
-            </svg>
-            Kolom
-          </button>
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onClick={() => setColumnsOpen((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h10" />
+              </svg>
+              Kolom
+            </button>
+            {columnsOpen && (
+              <div
+                ref={columnsRef}
+                className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-lg"
+              >
+                <div className="px-2 py-1 text-xs text-gray-500">Tampilkan Kolom</div>
+                {[
+                  { key: 'image', label: 'Gambar' },
+                  { key: 'name', label: 'Nama' },
+                  { key: 'code', label: 'Kode Produk' },
+                  { key: 'category', label: 'Kategori Produk' },
+                  { key: 'brand', label: 'Merk Produk' },
+                  { key: 'qty', label: 'Qty' },
+                  { key: 'branch', label: 'Cabang' },
+                  { key: 'sellPrice', label: 'Harga Jual per satuan' },
+                  { key: 'buyPrice', label: 'Harga Beli per satuan' },
+                ].map((c) => (
+                  <div key={c.key} className="flex items-center justify-between px-2 py-1">
+                    <span className="text-sm text-gray-700">{c.label}</span>
+                    <button
+                      onClick={() => setColumns((p) => ({ ...p, [c.key]: !p[c.key as keyof typeof p] }))}
+                      className={cn(
+                        'relative inline-flex h-5 w-9 items-center rounded-full transition',
+                        columns[c.key as keyof typeof columns] ? 'bg-jax-lime' : 'bg-gray-200'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition',
+                          columns[c.key as keyof typeof columns] ? 'translate-x-4' : 'translate-x-1'
+                        )}
+                      />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between px-2 py-1 opacity-60">
+                  <span className="text-sm text-gray-700">Aksi</span>
+                  <button
+                    className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition', 'bg-gray-300')}
+                    disabled
+                  >
+                    <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -142,13 +306,26 @@ export default function BarangProdukPage() {
         >
           <span className="text-base leading-none">+</span> Tambah
         </button>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".xlsx, .xls"
+        />
+        <button 
+          onClick={handleImportClick}
+          className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
+        >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3" />
           </svg>
           Import
         </button>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition">
+        <button 
+          onClick={handleExport}
+          className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
+        >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21V9m0 0l4 4m-4-4l-4 4M4 7V4h16v3" />
           </svg>
@@ -178,40 +355,42 @@ export default function BarangProdukPage() {
           <table className="min-w-full">
             <thead className="border-b border-gray-200">
               <tr className="text-left text-[11px] text-gray-500">
-                <th className="px-5 py-3 font-medium">Gambar</th>
-                <th className="px-5 py-3 font-medium">Nama</th>
-                <th className="px-5 py-3 font-medium">Kode Produk</th>
-                <th className="px-5 py-3 font-medium">Kategori Produk</th>
-                <th className="px-5 py-3 font-medium">Merk Produk</th>
-                <th className="px-5 py-3 font-medium">Qty</th>
-                <th className="px-5 py-3 font-medium">Cabang</th>
-                <th className="px-5 py-3 font-medium">Harga Jual per satuan</th>
-                <th className="px-5 py-3 font-medium">Harga Beli per satuan</th>
+                {columns.image && <th className="px-5 py-3 font-medium">Gambar</th>}
+                {columns.name && <th className="px-5 py-3 font-medium">Nama</th>}
+                {columns.code && <th className="px-5 py-3 font-medium">Kode Produk</th>}
+                {columns.category && <th className="px-5 py-3 font-medium">Kategori Produk</th>}
+                {columns.brand && <th className="px-5 py-3 font-medium">Merk Produk</th>}
+                {columns.qty && <th className="px-5 py-3 font-medium">Qty</th>}
+                {columns.branch && <th className="px-5 py-3 font-medium">Cabang</th>}
+                {columns.sellPrice && <th className="px-5 py-3 font-medium">Harga Jual per satuan</th>}
+                {columns.buyPrice && <th className="px-5 py-3 font-medium">Harga Beli per satuan</th>}
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((r) => (
                 <tr key={r.code} className="border-b border-gray-100">
-                  <td className="px-5 py-3">
-                    {r.imageDataUrl ? (
-                      <img
-                        src={r.imageDataUrl}
-                        alt={r.name}
-                        className="h-8 w-8 rounded-full object-cover border border-gray-200"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-gray-200" />
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.category}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.brand}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.qty.toLocaleString('id-ID')}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.branch}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.sellPrice.toLocaleString('id-ID')}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.buyPrice.toLocaleString('id-ID')}</td>
+                  {columns.image && (
+                    <td className="px-5 py-3">
+                      {r.imageDataUrl ? (
+                        <img
+                          src={r.imageDataUrl}
+                          alt={r.name}
+                          className="h-8 w-8 rounded-full object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-gray-200" />
+                      )}
+                    </td>
+                  )}
+                  {columns.name && <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>}
+                  {columns.code && <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>}
+                  {columns.category && <td className="px-5 py-3 text-sm text-gray-700">{r.category}</td>}
+                  {columns.brand && <td className="px-5 py-3 text-sm text-gray-700">{r.brand}</td>}
+                  {columns.qty && <td className="px-5 py-3 text-sm text-gray-700">{r.qty.toLocaleString('id-ID')}</td>}
+                  {columns.branch && <td className="px-5 py-3 text-sm text-gray-700">{r.branch}</td>}
+                  {columns.sellPrice && <td className="px-5 py-3 text-sm text-gray-700">{r.sellPrice.toLocaleString('id-ID')}</td>}
+                  {columns.buyPrice && <td className="px-5 py-3 text-sm text-gray-700">{r.buyPrice.toLocaleString('id-ID')}</td>}
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button

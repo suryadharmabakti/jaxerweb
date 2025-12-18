@@ -2,6 +2,7 @@
 
 import AppShell from '@/components/AppShell';
 import { loadCategories, saveCategories, type CategoryRow } from '@/app/kelola-barang/kategori-produk/categoryStore';
+import { exportToExcel, importFromExcel } from '@/utils/excel';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -22,9 +23,28 @@ export default function KategoriProdukPage() {
 
   const [openMenuForCode, setOpenMenuForCode] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const columnsRef = useRef<HTMLDivElement | null>(null);
+  const [columns, setColumns] = useState<Record<string, boolean>>({
+    name: true,
+    code: true,
+    actions: true,
+  });
 
   useEffect(() => {
     setRows(loadCategories());
+    try {
+      const saved = localStorage.getItem('columns_kategori');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setColumns({
+          name: Boolean(parsed.name),
+          code: Boolean(parsed.code),
+          actions: true,
+        });
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -39,6 +59,25 @@ export default function KategoriProdukPage() {
     window.addEventListener('mousedown', onMouseDown);
     return () => window.removeEventListener('mousedown', onMouseDown);
   }, [openMenuForCode]);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!columnsOpen) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (columnsRef.current && columnsRef.current.contains(target)) return;
+      setColumnsOpen(false);
+    };
+    window.addEventListener('mousedown', onMouseDown);
+    return () => window.removeEventListener('mousedown', onMouseDown);
+  }, [columnsOpen]);
+
+  useEffect(() => {
+    try {
+      const toSave = { name: columns.name, code: columns.code };
+      localStorage.setItem('columns_kategori', JSON.stringify(toSave));
+    } catch {}
+  }, [columns]);
 
   const filteredRows = useMemo(() => {
     const q = filterText.trim().toLowerCase();
@@ -63,6 +102,59 @@ export default function KategoriProdukPage() {
     router.push(`/kelola-barang/kategori-produk/${encodeURIComponent(code)}/edit`);
   };
 
+  const handleExport = () => {
+    const dataToExport = rows.map(row => ({
+      'Nama Kategori': row.name,
+      'Kode Kategori': row.code
+    }));
+    exportToExcel(dataToExport, 'Kategori_Produk');
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const jsonData = await importFromExcel(file);
+      
+      const newRows = [...rows];
+      let addedCount = 0;
+      let updatedCount = 0;
+
+      jsonData.forEach((item: any) => {
+        const name = item['Nama Kategori'] || item['Name'] || item['name'];
+        const code = item['Kode Kategori'] || item['Code'] || item['code'];
+
+        if (name && code) {
+          const existingIndex = newRows.findIndex(r => r.code === code);
+          
+          if (existingIndex >= 0) {
+            newRows[existingIndex] = { ...newRows[existingIndex], name };
+            updatedCount++;
+          } else {
+            newRows.push({ name, code });
+            addedCount++;
+          }
+        }
+      });
+
+      saveCategories(newRows);
+      setRows(newRows);
+      alert(`Import berhasil! Data ditambah: ${addedCount}, Data diupdate: ${updatedCount}`);
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert('Gagal mengimport file. Pastikan format Excel benar.');
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <AppShell>
       <div className="flex items-start justify-between">
@@ -82,12 +174,69 @@ export default function KategoriProdukPage() {
             </svg>
             Filter
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h10" />
-            </svg>
-            Kolom
-          </button>
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onClick={() => setColumnsOpen((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h10" />
+              </svg>
+              Kolom
+            </button>
+            {columnsOpen && (
+              <div
+                ref={columnsRef}
+                className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-lg"
+              >
+                <div className="px-2 py-1 text-xs text-gray-500">Tampilkan Kolom</div>
+                <div className="flex items-center justify-between px-2 py-1">
+                  <span className="text-sm text-gray-700">Nama Kategori</span>
+                  <button
+                    onClick={() => setColumns((p) => ({ ...p, name: !p.name }))}
+                    className={cn(
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition',
+                      columns.name ? 'bg-jax-lime' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-4 w-4 transform rounded-full bg-white transition',
+                        columns.name ? 'translate-x-4' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1">
+                  <span className="text-sm text-gray-700">Kode Kategori</span>
+                  <button
+                    onClick={() => setColumns((p) => ({ ...p, code: !p.code }))}
+                    className={cn(
+                      'relative inline-flex h-5 w-9 items-center rounded-full transition',
+                      columns.code ? 'bg-jax-lime' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-4 w-4 transform rounded-full bg-white transition',
+                        columns.code ? 'translate-x-4' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 opacity-60">
+                  <span className="text-sm text-gray-700">Aksi</span>
+                  <button
+                    className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition', 'bg-gray-300')}
+                    disabled
+                  >
+                    <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -119,13 +268,26 @@ export default function KategoriProdukPage() {
         >
           <span className="text-base leading-none">+</span> Tambah
         </button>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".xlsx, .xls"
+        />
+        <button 
+          onClick={handleImportClick}
+          className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
+        >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3" />
           </svg>
           Import
         </button>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition">
+        <button 
+          onClick={handleExport}
+          className="inline-flex items-center gap-2 rounded-lg bg-jax-lime px-3 py-2 text-sm font-medium text-white hover:bg-jax-limeDark transition"
+        >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21V9m0 0l4 4m-4-4l-4 4M4 7V4h16v3" />
           </svg>
@@ -138,16 +300,16 @@ export default function KategoriProdukPage() {
           <table className="min-w-full">
             <thead className="border-b border-gray-200">
               <tr className="text-left text-[11px] text-gray-500">
-                <th className="px-5 py-3 font-medium">Nama Kategori</th>
-                <th className="px-5 py-3 font-medium">Kode Kategori</th>
+                {columns.name && <th className="px-5 py-3 font-medium">Nama Kategori</th>}
+                {columns.code && <th className="px-5 py-3 font-medium">Kode Kategori</th>}
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((r) => (
                 <tr key={r.code} className="border-b border-gray-100">
-                  <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>
-                  <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>
+                  {columns.name && <td className="px-5 py-3 text-sm text-gray-900">{r.name}</td>}
+                  {columns.code && <td className="px-5 py-3 text-sm text-gray-700">{r.code}</td>}
                   <td className="px-5 py-3 text-right">
                     <div className="relative inline-block">
                       <button
