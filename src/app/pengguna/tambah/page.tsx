@@ -1,6 +1,7 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
+import SidebarTrigger from '@/components/SidebarTrigger';
 import { BRANCHES, DEFAULT_USERS, type Role, type UserRow, loadUsers, saveUsers } from '@/app/pengguna/userStore';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -38,66 +39,65 @@ export default function TambahPenggunaPage() {
 
   return (
     <AppShell>
-      <div className="flex items-start justify-between">
+      <div className="flex items-center gap-4">
+        <SidebarTrigger />
         <div>
           <div className="text-xs text-gray-400">Pengguna</div>
           <h1 className="mt-1 text-xl font-semibold text-gray-900">Tambah Pengguna</h1>
         </div>
       </div>
 
-      <div className="mt-4 w-full max-w-2xl rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
+      <div className="mt-4 w-full rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
         <div className="text-xs text-gray-500">Input manual: nama, email, cabang, role.</div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3">
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Nama</span>
+        <div className="mt-4 flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Nama</span>
             <input
               value={draft.name}
               onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value.toLowerCase() }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="nama pengguna"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Email</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Email</span>
             <input
               value={draft.email}
               onChange={(e) => setDraft((p) => ({ ...p, email: e.target.value.toLowerCase() }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="email@contoh.com"
               inputMode="email"
             />
-          </label>
+          </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="grid gap-1">
-              <span className="text-xs text-gray-600">Cabang</span>
-              <select
-                value={draft.branch}
-                onChange={(e) => setDraft((p) => ({ ...p, branch: e.target.value }))}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
-              >
-                {branches.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Cabang</span>
+            <select
+              value={draft.branch}
+              onChange={(e) => setDraft((p) => ({ ...p, branch: e.target.value }))}
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+            >
+              {branches.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <label className="grid gap-1">
-              <span className="text-xs text-gray-600">Role</span>
-              <select
-                value={draft.role}
-                onChange={(e) => setDraft((p) => ({ ...p, role: e.target.value as Role }))}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
-              >
-                <option value="admin">Admin</option>
-                <option value="cashier">Kasir</option>
-                <option value="warehouse">Gudang</option>
-              </select>
-            </label>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Role</span>
+            <select
+              value={draft.role}
+              onChange={(e) => setDraft((p) => ({ ...p, role: e.target.value as Role }))}
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+            >
+              <option value="admin">Admin</option>
+              <option value="cashier">Kasir</option>
+              <option value="warehouse">Gudang</option>
+            </select>
           </div>
         </div>
 

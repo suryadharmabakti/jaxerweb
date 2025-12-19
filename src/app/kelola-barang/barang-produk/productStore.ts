@@ -1,5 +1,17 @@
 import { readJson, writeJson } from '@/services/localStore';
 
+export type ProductRow = {
+  imageDataUrl?: string;
+  name: string;
+  code: string;
+  category: string;
+  brand: string;
+  qty: number;
+  branch: string;
+  sellPrice: number;
+  buyPrice: number;
+};
+
 export type Product = {
   _id: string,
   name: string,

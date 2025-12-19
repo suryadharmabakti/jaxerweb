@@ -1,6 +1,7 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
+import SidebarTrigger from '@/components/SidebarTrigger';
 import { loadCategories, saveCategories, type CategoryRow } from '@/app/kelola-barang/kategori-produk/categoryStore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -35,36 +36,37 @@ export default function TambahKategoriProdukPage() {
 
   return (
     <AppShell>
-      <div className="flex items-start justify-between">
+      <div className="flex items-center gap-4">
+        <SidebarTrigger />
         <div>
           <div className="text-xs text-gray-400">Kelola Barang &nbsp;›&nbsp; Kategori Produk</div>
           <h1 className="mt-1 text-xl font-semibold text-gray-900">Tambah Kategori Produk</h1>
         </div>
       </div>
 
-      <div className="mt-4 w-full max-w-3xl rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
+      <div className="mt-4 w-full rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
         <div className="text-xs text-gray-500">Tambah data kategori produk: nama dan kode kategori.</div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Nama Kategori</span>
+        <div className="mt-4 flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Nama Kategori</span>
             <input
               value={draft.name}
               onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="nama kategori"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Kode Kategori</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Kode Kategori</span>
             <input
               value={draft.code}
               onChange={(e) => setDraft((p) => ({ ...p, code: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="kode kategori"
             />
-          </label>
+          </div>
         </div>
 
         <div className="mt-5 flex items-center justify-end gap-2">

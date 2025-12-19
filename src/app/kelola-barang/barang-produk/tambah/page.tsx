@@ -1,6 +1,7 @@
 'use client';
 
 import AppShell from '@/components/AppShell';
+import SidebarTrigger from '@/components/SidebarTrigger';
 import { DEFAULT_PRODUCTS, type ProductRow, loadProducts, saveProducts } from '@/app/kelola-barang/barang-produk/productStore';
 import { DEFAULT_BRANCHES, branchNames, loadBranches } from '@/app/kelola-barang/cabang/branchStore';
 import { DEFAULT_CATEGORIES, categoryNames, loadCategories } from '@/app/kelola-barang/kategori-produk/categoryStore';
@@ -124,66 +125,65 @@ export default function TambahProdukPage() {
 
   return (
     <AppShell>
-      <div className="flex items-start justify-between">
+      <div className="flex items-center gap-4">
+        <SidebarTrigger />
         <div>
           <div className="text-xs text-gray-400">Kelola Barang &nbsp;›&nbsp; Barang/Produk</div>
           <h1 className="mt-1 text-xl font-semibold text-gray-900">Tambah Produk</h1>
         </div>
       </div>
 
-      <div className="mt-4 w-full max-w-3xl rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
+      <div className="mt-4 w-full rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
         <div className="text-xs text-gray-500">Tambah data produk: gambar, nama, kode, kategori, merk, qty, harga jual, harga beli.</div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="grid gap-1">
-              <span className="text-xs text-gray-600">Gambar Produk</span>
-              <div className="flex items-center gap-3">
-                {draft.imageDataUrl ? (
-                  <img
-                    src={draft.imageDataUrl}
-                    alt="preview"
-                    className="h-12 w-12 rounded-full object-cover border border-gray-200"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-gray-200" />
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handlePickImage(e.target.files?.[0] ?? null)}
-                  className="block w-full text-sm text-gray-700"
+        <div className="mt-4 flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Gambar Produk</span>
+            <div className="flex-1 flex items-center gap-3">
+              {draft.imageDataUrl ? (
+                <img
+                  src={draft.imageDataUrl}
+                  alt="preview"
+                  className="h-12 w-12 rounded-full object-cover border border-gray-200"
                 />
-              </div>
-            </label>
+              ) : (
+                <div className="h-12 w-12 rounded-full bg-gray-200" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handlePickImage(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-gray-700"
+              />
+            </div>
           </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Nama</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Nama</span>
             <input
               value={draft.name}
               onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="nama produk"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Kode Produk</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Kode Produk</span>
             <input
               value={draft.code}
               onChange={(e) => setDraft((p) => ({ ...p, code: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="kode produk"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Kategori</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Kategori</span>
             <select
               value={draft.category}
               onChange={(e) => setDraft((p) => ({ ...p, category: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
             >
               <option value="" disabled>
                 Pilih kategori
@@ -194,14 +194,14 @@ export default function TambahProdukPage() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Merk</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Merk</span>
             <select
               value={draft.brand}
               onChange={(e) => setDraft((p) => ({ ...p, brand: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
             >
               <option value="" disabled>
                 Pilih merk
@@ -212,25 +212,25 @@ export default function TambahProdukPage() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Qty</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Qty</span>
             <input
               value={draft.qty}
               onChange={(e) => setDraft((p) => ({ ...p, qty: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="0"
               inputMode="numeric"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Cabang</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Cabang</span>
             <select
               value={draft.branch}
               onChange={(e) => setDraft((p) => ({ ...p, branch: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
             >
               <option value="" disabled>
                 Pilih cabang
@@ -241,29 +241,29 @@ export default function TambahProdukPage() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Harga Jual per satuan</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Harga Jual per satuan</span>
             <input
               value={draft.sellPrice}
               onChange={(e) => setDraft((p) => ({ ...p, sellPrice: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="0"
               inputMode="numeric"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1">
-            <span className="text-xs text-gray-600">Harga Beli per satuan</span>
+          <div className="flex items-center gap-4">
+            <span className="w-48 text-xs text-gray-600">Harga Beli per satuan</span>
             <input
               value={draft.buyPrice}
               onChange={(e) => setDraft((p) => ({ ...p, buyPrice: e.target.value }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-jax-lime"
               placeholder="0"
               inputMode="numeric"
             />
-          </label>
+          </div>
         </div>
 
         <div className="mt-5 flex items-center justify-end gap-2">

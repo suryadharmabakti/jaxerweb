@@ -1,4 +1,5 @@
 import AppShell from '@/components/AppShell';
+import SidebarTrigger from '@/components/SidebarTrigger';
 
 type StatCard = {
   title: string;
@@ -74,13 +75,14 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="flex items-start justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <SidebarTrigger />
+          <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+        </div>
 
         <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h18M6 12h12M10 19h4" />
-          </svg>
+          <img src="/filters.svg" alt="Filter" className="h-4 w-4 object-contain" />
           Filter
         </button>
       </div>

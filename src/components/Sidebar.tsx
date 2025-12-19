@@ -1,9 +1,9 @@
-// src/components/Sidebar.tsx
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useSidebar } from '@/components/AppShell';
 
 type NavItem =
   | {
@@ -34,12 +34,8 @@ function DotIcon({ active }: { active: boolean }) {
   );
 }
 
-interface SidebarProps {
-  open: boolean;
-  toggle: () => void;
-}
-
-export default function Sidebar({ open, toggle }: SidebarProps) {
+export default function Sidebar() {
+  const { isSidebarOpen: open } = useSidebar();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -57,28 +53,14 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
         label: 'Beranda',
         href: '/dashboard',
         icon: (
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-7h4v7h4a1 1 0 001-1V10"
-            />
-          </svg>
+          <img src="/beranda.png" alt="Beranda" className="h-5 w-5 object-contain" />
         ),
       },
       {
         key: 'kelola-barang',
         label: 'Kelola Barang',
         icon: (
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6m16 0v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6m16 0H4"
-            />
-          </svg>
+          <img src="/manage1.png" alt="Kelola Barang" className="h-5 w-5 object-contain" />
         ),
         children: [
           { key: 'cabang', label: 'Cabang', href: '/kelola-barang/cabang' },
@@ -139,28 +121,23 @@ export default function Sidebar({ open, toggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-jax-line bg-white transition-all duration-300',
+        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-jax-line bg-white transition-all duration-400',
         open ? 'w-72' : 'w-20'
       )}
     >
       <div className={cn('flex items-center justify-between py-6', open ? 'px-6' : 'px-3')}>
         <div className={cn('flex items-center', open ? 'gap-2' : 'justify-center w-full')}>
           <img
-            src={open ? '/jaxlab.png' : '/jaxer.png'}
-            alt={open ? 'JaxLab' : 'Jaxer'}
-            className={cn(
-              open ? 'h-6 w-auto' : 'h-8 w-8 rounded-lg bg-white ring-1 ring-gray-200 shadow-sm p-1 object-contain'
-            )}
-          />
+  src={open ? '/jaxlab.png' : '/jaxer.png'}
+  alt={open ? 'JaxLab' : 'Jaxer'}
+  className={cn(
+    open
+      ? 'h-10 w-auto' 
+      : 'h-12 w-12 rounded-lg bg-white p-1 object-contain'
+  )}
+/>
+
         </div>
-        <button
-          onClick={toggle}
-          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
       </div>
 
       {open && <div className="px-6 pb-2 text-xs text-gray-400">Highlight</div>}

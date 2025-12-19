@@ -22,7 +22,7 @@ const api = {
     }
 
     return data;
-  }
+  },
 
 
   // Register
