@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useState, createContext, useContext } from 'react';
+import { type ReactNode, useState, useEffect, createContext, useContext } from 'react';
 import Sidebar from '@/components/Sidebar';
 
 interface SidebarContextType {
@@ -19,9 +19,24 @@ export function useSidebar() {
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('sidebar_open');
+      if (saved === 'true') return true;
+      if (saved === 'false') return false;
+      return true;
+    } catch {
+      return true;
+    }
+  });
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebar_open', isSidebarOpen ? 'true' : 'false');
+    } catch {}
+  }, [isSidebarOpen]);
 
   return (
     <SidebarContext.Provider value={{ isSidebarOpen, toggleSidebar }}>
